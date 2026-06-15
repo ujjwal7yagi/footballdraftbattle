@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Football Draft Battle</title>
-<!-- PeerJS CDN for Serverless 1v1 Online Multiplayer Connection -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -47,6 +47,9 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 .btn-secondary{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#fff}
 .btn-secondary:hover:not(:disabled){background:rgba(255,255,255,0.1)}
 
+/* Header Nav */
+.top-nav { position:absolute; top:1rem; left:1rem; right:1rem; display:flex; justify-content:space-between; align-items:center; z-index:10; }
+
 /* turn banner */
 .turn-banner{text-align:center;padding:14px;border-radius:var(--radius-md);font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:1px solid rgba(255,255,255,.05)}
 .turn-p1{background:rgba(37,99,235,.2);color:#93c5fd;border-color:rgba(37,99,235,.3)}
@@ -63,6 +66,21 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 .pos-slot .plabel{font-size:9px;font-weight:700;color:var(--color-muted);opacity:.6;text-transform:uppercase}
 .pos-slot .rating{font-size:16px;font-weight:800;color:#22a852;text-shadow:0 0 10px rgba(34,168,82,.3)}
 .pos-slot .pname{font-size:9px;font-weight:600;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* mini pitch for setup */
+.mini-pitch{background:linear-gradient(180deg,#0a2e14,#0d3a1a);border-radius:8px;border:1px solid rgba(0,255,102,.15);padding:10px;height:120px;display:flex;flex-direction:column;justify-content:space-between;margin-top:10px}
+.mini-pitch-row{display:flex;justify-content:center;gap:8px}
+.mini-dot{width:12px;height:12px;border-radius:50%;background:var(--color-muted);box-shadow:0 2px 4px rgba(0,0,0,0.4)}
+.mini-dot.gk{background:var(--color-gk)}.mini-dot.def{background:var(--color-def)}.mini-dot.mid{background:var(--color-mid)}.mini-dot.fwd{background:var(--color-fwd)}
+
+/* toggle switch */
+.toggle-switch{position:relative;width:44px;height:24px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch label{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.1);border-radius:24px;transition:.4s}
+.toggle-switch label:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.4s}
+.toggle-switch input:checked + label{background:#00ff66}
+.toggle-switch input:checked + label:before{transform:translateX(20px);background:#000}
+.toggle-switch input:disabled + label{opacity:0.5;cursor:not-allowed}
 
 /* needs */
 .needs-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;justify-content:center}
@@ -158,69 +176,60 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 /* pill */
 .pill-blue{display:inline-flex;align-items:center;justify-content:center;font-size:11px;width:18px;height:18px;border-radius:50%;font-weight:700;background:#2563eb;color:#fff;flex-shrink:0}
 
-/* welcome */
-@keyframes pulseGlow{0%,100%{box-shadow:0 0 20px rgba(0,255,102,.35);transform:translateY(0)}50%{box-shadow:0 0 35px rgba(0,255,102,.65);transform:translateY(-2px)}}
-.glow-btn{animation:pulseGlow 2.5s infinite ease-in-out}
-
-/* scrollbar */
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
-
 /* tab view toggle */
 .tab-btns{display:flex;gap:6px;margin-bottom:10px}
 .tab-btn{flex:1;padding:7px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--color-muted);cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
 .tab-btn.active{background:rgba(0,255,102,.1);border-color:rgba(0,255,102,.3);color:#22a852}
+
+/* glow effect */
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 20px rgba(0,255,102,.35);transform:translateY(0)}50%{box-shadow:0 0 35px rgba(0,255,102,.65);transform:translateY(-2px)}}
+.glow-btn{animation:pulseGlow 2.5s infinite ease-in-out}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
 </style>
 </head>
 <body>
 <canvas id="bg-canvas"></canvas>
 <button class="audio-toggle" id="audio-toggle-btn" onclick="toggleMusic()" title="Toggle Music">🔊</button>
 
-<!-- WELCOME -->
 <div id="welcome" class="screen active">
+  <div class="top-nav">
+    <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px;" onclick="showScreen('welcome')">Home</button>
+    <div>
+      <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-context="signin" data-callback="handleCredentialResponse" data-auto_prompt="false"></div>
+      <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="filled_black" data-text="signin_with" data-size="medium" data-logo_alignment="left"></div>
+    </div>
+  </div>
+
   <div style="text-align:center;padding:4rem 0 2rem;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1">
     <div style="width:80px;height:80px;margin-bottom:1.5rem;background:rgba(0,255,102,.1);border:2px solid #00ff66;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(0,255,102,.2)">
       <span style="font-size:38px">⚽</span>
     </div>
-    <div style="font-size:13px;color:#00ff66;font-weight:800;letter-spacing:4px;margin-bottom:12px">DRAFT BATTLE</div>
-    <h1 style="font-size:36px;line-height:1.1;margin-bottom:1rem;text-shadow:0 4px 12px rgba(0,0,0,.6)">FOOTBALL<br><span style="color:#00ff66">DRAFT BATTLE</span></h1>
-    <p class="muted" style="max-width:300px;margin:0 auto 2.5rem;line-height:1.6">Spin for clubs. Draft legends. Build your XI. Dominate the pitch.</p>
+    <div style="font-size:13px;color:#00ff66;font-weight:800;letter-spacing:4px;margin-bottom:12px">38-0: DRAFT BATTLE</div>
+    <h1 style="font-size:36px;line-height:1.1;margin-bottom:1rem;text-shadow:0 4px 12px rgba(0,0,0,.6)">ALL-TIME ENGLISH<br><span style="color:#00ff66">TOP-FLIGHT XI</span></h1>
+    <p class="muted" style="max-width:300px;margin:0 auto 2.5rem;line-height:1.6">Select formation, tune difficulty, draft legends, and build your XI with chemistry.</p>
     <button class="btn btn-primary glow-btn" style="width:100%;max-width:280px;padding:16px;font-size:15px" onclick="showScreen('setup')">⚡ Enter Arena</button>
   </div>
-  <div style="text-align:center;padding-bottom:1rem" class="muted">v3.5 · Premium Match Engine & Chemistry</div>
 </div>
 
-<!-- SETUP -->
 <div id="setup" class="screen">
   <div style="text-align:center;padding:1rem 0 0">
-    <h1>Build your XI.</h1>
-    <p class="muted" style="margin-top:6px">Spin · Draft · Simulate 90 mins</p>
+    <h1>Rules & Config</h1>
+    <p class="muted" style="margin-top:6px">Configure your draft settings</p>
   </div>
 
-  <!-- Mode Selector Controls -->
   <div class="card" style="padding: 12px; display:flex; flex-direction:column; gap:8px;">
     <div class="tab-btns">
       <button class="tab-btn active" id="mode-btn-local" onclick="togglePlayMode('local')">📱 Local Pass & Play</button>
       <button class="tab-btn" id="mode-btn-online" onclick="togglePlayMode('online')">🌐 Online 1v1 Battle</button>
     </div>
 
-    <!-- LOCAL CONFIGURATION FIELDS -->
     <div id="local-setup-fields" class="grid2">
-      <div>
-        <div class="p1-header" style="margin-bottom:10px">Manager 1</div>
-        <input id="p1name" type="text" placeholder="Name..." value="Alex">
-      </div>
-      <div>
-        <div class="p2-header" style="margin-bottom:10px">Manager 2</div>
-        <input id="p2name" type="text" placeholder="Name..." value="Jordan">
-      </div>
+      <div><div class="p1-header" style="margin-bottom:10px">Manager 1</div><input id="p1name" type="text" placeholder="Name..." value="Alex"></div>
+      <div><div class="p2-header" style="margin-bottom:10px">Manager 2</div><input id="p2name" type="text" placeholder="Name..." value="Jordan"></div>
     </div>
 
-    <!-- ONLINE CONFIGURATION FIELDS -->
     <div id="online-setup-fields" style="display:none; flex-direction:column; gap:12px;">
-      <div>
-        <div class="p1-header" style="margin-bottom:6px; background:rgba(0,255,102,0.1); color:#00ff66;">Your Username</div>
-        <input id="online-username" type="text" placeholder="Enter username..." value="Striker">
-      </div>
+      <div><div class="p1-header" style="margin-bottom:6px; background:rgba(0,255,102,0.1); color:#00ff66;">Your Username</div><input id="online-username" type="text" placeholder="Enter username..." value="Striker"></div>
       <div class="grid2">
         <button class="btn btn-secondary" onclick="initHostRoom()">Host Game</button>
         <div style="display:flex; flex-direction:column; gap:4px;">
@@ -232,33 +241,49 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
     </div>
   </div>
 
-  <div class="card">
-    <h3 style="margin-bottom:12px">How to play</h3>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">1</span><span class="muted">Take turns spinning the wheel for a random club</span></div>
-      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">2</span><span class="muted">See the full squad — pick any player you still need</span></div>
-      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">3</span><span class="muted">If no useful players, use your free Respin</span></div>
-      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">4</span><span class="muted">Fill GK · 3 DEF · 4 MID · 3 FWD then simulate!</span></div>
-      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">5</span><span style="color:#fbbf24;font-size:13px;font-weight:600">Chemistry: Draft teammates from the same club for rating boosts!</span></div>
+  <div class="card" style="padding: 12px;">
+    <h3 style="margin-bottom:8px">Formation</h3>
+    <div class="tab-btns" style="flex-wrap:wrap" id="formation-btns"></div>
+    <p id="form-desc" class="muted" style="font-size:12px;margin-bottom:8px"></p>
+    <div class="mini-pitch" id="mini-pitch-preview"></div>
+  </div>
+
+  <div class="card" style="padding: 12px;">
+    <h3 style="margin-bottom:8px">Difficulty</h3>
+    <div class="tab-btns" id="diff-btns">
+      <button class="tab-btn" onclick="selectDifficulty('easy')" id="btn-diff-easy">Easy</button>
+      <button class="tab-btn active" onclick="selectDifficulty('normal')" id="btn-diff-normal">Normal</button>
+      <button class="tab-btn" onclick="selectDifficulty('hard')" id="btn-diff-hard">Hard</button>
+    </div>
+    <p id="diff-desc" class="muted" style="font-size:12px;margin-bottom:12px">1 reroll available</p>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+      <div>
+        <h3 style="margin:0">Show Ratings</h3>
+        <p id="ratings-desc" class="muted" style="font-size:11px; margin-top:2px">On - Player overalls visible</p>
+      </div>
+      <div class="toggle-switch">
+         <input type="checkbox" id="ratings-toggle" checked onchange="toggleRatings()">
+         <label for="ratings-toggle"></label>
+      </div>
     </div>
   </div>
+
   <button id="start-local-btn" class="btn btn-primary" style="width:100%;padding:14px" onclick="startGame()">⚽ Start Draft</button>
 </div>
 
-<!-- DRAFT -->
 <div id="draft" class="screen">
   <div id="turn-banner" class="turn-banner turn-p1">Alex's turn</div>
   <div class="progress-wrap"><div class="progress-bar" id="draft-progress" style="width:0%"></div></div>
   <div class="pick-counter" id="pick-counter">Pick <span id="pick-num">1</span> of <span id="pick-total">22</span></div>
 
-  <!-- Team grids with tab to switch between list/pitch -->
   <div class="grid2" style="gap:8px">
-    <div>
+    <div id="team1-container" style="transition:all 0.3s ease; padding:8px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);">
       <div class="p1-header" style="margin-bottom:8px" id="p1-header">Alex's XI</div>
       <div class="pos-grid" id="team1-slots"></div>
       <div class="needs-wrap" id="p1-needs"></div>
     </div>
-    <div>
+    <div id="team2-container" style="transition:all 0.3s ease; padding:8px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);">
       <div class="p2-header" style="margin-bottom:8px" id="p2-header">Jordan's XI</div>
       <div class="pos-grid" id="team2-slots"></div>
       <div class="needs-wrap" id="p2-needs"></div>
@@ -287,7 +312,6 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
   </div>
 </div>
 
-<!-- FORMATION VIEW (pre-match) -->
 <div id="formation" class="screen">
   <div style="text-align:center">
     <h2 style="margin-bottom:4px">Teams Confirmed</h2>
@@ -313,7 +337,6 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
   <button id="match-kickoff-btn" class="btn btn-primary" style="width:100%;padding:14px" onclick="goToMatch()">🏟️ Kick Off!</button>
 </div>
 
-<!-- MATCH -->
 <div id="match" class="screen">
   <div style="text-align:center"><h2 style="margin-bottom:4px">Match Day</h2><p class="muted" style="font-size:12px">Full 90-minute simulation</p></div>
   <div class="card">
@@ -352,6 +375,23 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 </div>
 
 <script>
+function handleCredentialResponse(response) { console.log("Encoded JWT ID token: " + response.credential); }
+
+// ─── NEW CONFIG: FORMATIONS & DIFFICULTIES ───────────────────────────────────
+const FORMATIONS = {
+  '4-3-3': { name: '4-3-3', desc: 'Attacking with width. Three forwards create constant threat.', n: ['GK','DEF','DEF','DEF','DEF','MID','MID','MID','FWD','FWD','FWD'] },
+  '4-4-2': { name: '4-4-2', desc: 'Classic balance. Two banks of four with a strike partnership.', n: ['GK','DEF','DEF','DEF','DEF','MID','MID','MID','MID','FWD','FWD'] },
+  '4-2-3-1': { name: '4-2-3-1', desc: 'Modern tactical setup. Double pivot for defensive stability.', n: ['GK','DEF','DEF','DEF','DEF','MID','MID','MID','MID','MID','FWD'] },
+  '3-5-2': { name: '3-5-2', desc: 'Possession heavy. Wing-backs provide width while dominating center.', n: ['GK','DEF','DEF','DEF','MID','MID','MID','MID','MID','FWD','FWD'] },
+  '5-4-1': { name: '5-4-1', desc: 'Park the bus. Ultra-defensive with quick counter-attack.', n: ['GK','DEF','DEF','DEF','DEF','DEF','MID','MID','MID','MID','FWD'] }
+};
+
+const DIFFICULTIES = {
+  'easy': { name: 'Easy', rerolls: 3, blind: false, desc: '3 rerolls available' },
+  'normal': { name: 'Normal', rerolls: 1, blind: false, desc: '1 reroll available' },
+  'hard': { name: 'Hard', rerolls: 0, blind: true, desc: 'No rerolls · ratings hidden' }
+};
+
 // ─── CREST GENERATOR ─────────────────────────────────────────────────────────
 function makeCrest(c){
   const bg=c.bg,fg=c.fg,ac=c.ac||c.fg,ab=c.abbr;
@@ -377,81 +417,76 @@ const CLUBS=[
   ]},
   {name:"Man United",abbr:"MUN",era:"2008",shape:"shield",bg:"#DA291C",fg:"#fff",ac:"#FBE122",players:[
     {n:"E. van der Sar",pos:"GK",r:89},{n:"G. Neville",pos:"DEF",r:82},{n:"R. Ferdinand",pos:"DEF",r:91},{n:"N. Vidić",pos:"DEF",r:90},{n:"P. Evra",pos:"DEF",r:85},{n:"M. Carrick",pos:"MID",r:82},{n:"P. Scholes",pos:"MID",r:89},{n:"O. Hargreaves",pos:"MID",r:79},{n:"C. Ronaldo",pos:"FWD",r:95},{n:"W. Rooney",pos:"FWD",r:90},{n:"C. Tevez",pos:"FWD",r:86},{n:"Ji-sung Park",pos:"MID",r:79},{n:"R. Giggs",pos:"MID",r:86}
-  ]},
-  {name:"Leicester",abbr:"LCY",era:"2016",shape:"shield",bg:"#003090",fg:"#fff",ac:"#FDBE11",players:[
-    {n:"K. Schmeichel",pos:"GK",r:84},{n:"D. Simpson",pos:"DEF",r:74},{n:"W. Morgan",pos:"DEF",r:76},{n:"R. Huth",pos:"DEF",r:78},{n:"Ch. Fuchs",pos:"DEF",r:76},{n:"N. Kanté",pos:"MID",r:86},{n:"D. Drinkwater",pos:"MID",r:78},{n:"M. Albrighton",pos:"MID",r:74},{n:"Riyad Mahrez",pos:"FWD",r:86},{n:"J. Vardy",pos:"FWD",r:85},{n:"L. Okazaki",pos:"FWD",r:72},{n:"A. Ulloa",pos:"FWD",r:74},{n:"M. Inler",pos:"MID",r:72}
-  ]},
-  {name:"Tottenham",abbr:"TOT",era:"2019",shape:"circle",bg:"#132257",fg:"#fff",ac:"#fff",players:[
-    {n:"H. Lloris",pos:"GK",r:87},{n:"S. Trippier",pos:"DEF",r:81},{n:"T. Alderweireld",pos:"DEF",r:86},{n:"J. Vertonghen",pos:"DEF",r:84},{n:"D. Rose",pos:"DEF",r:80},{n:"M. Dembélé",pos:"MID",r:82},{n:"E. Dier",pos:"MID",r:79},{n:"Ch. Eriksen",pos:"MID",r:87},{n:"Son Heung-min",pos:"FWD",r:87},{n:"Harry Kane",pos:"FWD",r:90},{n:"L. Alli",pos:"FWD",r:82},{n:"F. Llorente",pos:"FWD",r:74},{n:"V. Wanyama",pos:"MID",r:77}
-  ]},
-  {name:"Newcastle",abbr:"NEW",era:"2023",shape:"shield",bg:"#241F20",fg:"#fff",ac:"#41B6E6",players:[
-    {n:"N. Pope",pos:"GK",r:84},{n:"K. Trippier",pos:"DEF",r:84},{n:"S. Botman",pos:"DEF",r:81},{n:"F. Schär",pos:"DEF",r:80},{n:"D. Burn",pos:"DEF",r:77},{n:"Joelinton",pos:"MID",r:78},{n:"B. Guimarães",pos:"MID",r:86},{n:"J. Willock",pos:"MID",r:76},{n:"A. Gordon",pos:"FWD",r:79},{n:"M. Almirón",pos:"FWD",r:78},{n:"A. Isak",pos:"FWD",r:84},{n:"J. Murphy",pos:"FWD",r:74},{n:"S. Longstaff",pos:"MID",r:74}
-  ]},
-  {name:"Aston Villa",abbr:"AVL",era:"2024",shape:"shield",bg:"#670E36",fg:"#fff",ac:"#95BFE5",players:[
-    {n:"E. Martínez",pos:"GK",r:88},{n:"M. Cash",pos:"DEF",r:78},{n:"E. Konsa",pos:"DEF",r:82},{n:"P. Torres",pos:"DEF",r:82},{n:"L. Digne",pos:"DEF",r:79},{n:"D. Tielemans",pos:"MID",r:80},{n:"J. McGinn",pos:"MID",r:81},{n:"D. Ramsey",pos:"MID",r:75},{n:"L. Diaby",pos:"FWD",r:82},{n:"O. Watkins",pos:"FWD",r:86},{n:"L. Bailey",pos:"FWD",r:78},{n:"B. Kamara",pos:"MID",r:76},{n:"M. Buendía",pos:"FWD",r:80}
-  ]},
-  {name:"Blackburn",abbr:"BRN",era:"1995",shape:"shield",bg:"#009EE0",fg:"#fff",ac:"#fff",players:[
-    {n:"T. Flowers",pos:"GK",r:81},{n:"G. Le Saux",pos:"DEF",r:81},{n:"C. Hendry",pos:"DEF",r:80},{n:"I. Pearce",pos:"DEF",r:76},{n:"H. Berg",pos:"DEF",r:77},{n:"D. Batty",pos:"MID",r:80},{n:"M. Sherwood",pos:"MID",r:77},{n:"P. Warhurst",pos:"MID",r:75},{n:"J. Wilcox",pos:"MID",r:74},{n:"Chris Sutton",pos:"FWD",r:82},{n:"Alan Shearer",pos:"FWD",r:93},{n:"G. Newell",pos:"FWD",r:73},{n:"S. Ripley",pos:"MID",r:72}
-  ]},
-  {name:"Chelsea",abbr:"CFC",era:"2012",shape:"circle",bg:"#034694",fg:"#fff",ac:"#DBA111",players:[
-    {n:"P. Čech",pos:"GK",r:89},{n:"B. Ivanović",pos:"DEF",r:83},{n:"G. Cahill",pos:"DEF",r:83},{n:"J. Terry",pos:"DEF",r:88},{n:"A. Cole",pos:"DEF",r:85},{n:"J. Mikel",pos:"MID",r:76},{n:"F. Lampard",pos:"MID",r:87},{n:"J. Mata",pos:"MID",r:86},{n:"S. Kalou",pos:"FWD",r:76},{n:"D. Drogba",pos:"FWD",r:89},{n:"F. Torres",pos:"FWD",r:81},{n:"R. Sturridge",pos:"FWD",r:80},{n:"D. Luiz",pos:"DEF",r:82}
-  ]},
-  {name:"West Ham",abbr:"WHU",era:"2023",shape:"shield",bg:"#7A263A",fg:"#fff",ac:"#1BB1E7",players:[
-    {n:"L. Fabiański",pos:"GK",r:79},{n:"V. Coufal",pos:"DEF",r:76},{n:"K. Zouma",pos:"DEF",r:80},{n:"T. Ogbonna",pos:"DEF",r:77},{n:"A. Cresswell",pos:"DEF",r:78},{n:"T. Souček",pos:"MID",r:80},{n:"D. Rice",pos:"MID",r:84},{n:"P. Fornals",pos:"MID",r:76},{n:"Jarrod Bowen",pos:"FWD",r:82},{n:"S. Benrahma",pos:"FWD",r:79},{n:"M. Antonio",pos:"FWD",r:77},{n:"P. Paquetá",pos:"MID",r:82},{n:"T. Soucek",pos:"MID",r:80}
-  ]},
-  {name:"Brighton",abbr:"BHA",era:"2023",shape:"shield",bg:"#0057B8",fg:"#fff",ac:"#FFCD00",players:[
-    {n:"R. Sánchez",pos:"GK",r:80},{n:"T. Lamptey",pos:"DEF",r:76},{n:"L. Dunk",pos:"DEF",r:80},{n:"A. Webster",pos:"DEF",r:76},{n:"P. March",pos:"DEF",r:78},{n:"Y. Gross",pos:"MID",r:79},{n:"A. Mac Allister",pos:"MID",r:84},{n:"M. Caicedo",pos:"MID",r:83},{n:"P. Mitoma",pos:"FWD",r:81},{n:"E. Undav",pos:"FWD",r:78},{n:"D. Welbeck",pos:"FWD",r:75},{n:"E. Ferguson",pos:"FWD",r:78},{n:"J. Enciso",pos:"FWD",r:77}
-  ]},
-  {name:"Man United",abbr:"MUN",era:"1999",shape:"shield",bg:"#DA291C",fg:"#fff",ac:"#FBE122",players:[
-    {n:"P. Schmeichel",pos:"GK",r:93},{n:"G. Neville",pos:"DEF",r:82},{n:"J. Stam",pos:"DEF",r:89},{n:"R. Pallister",pos:"DEF",r:84},{n:"D. Irwin",pos:"DEF",r:84},{n:"R. Keane",pos:"MID",r:90},{n:"P. Scholes",pos:"MID",r:88},{n:"D. Beckham",pos:"MID",r:89},{n:"R. Giggs",pos:"MID",r:87},{n:"A. Cole",pos:"FWD",r:86},{n:"D. Yorke",pos:"FWD",r:87},{n:"T. Sheringham",pos:"FWD",r:82},{n:"N. Butt",pos:"MID",r:79}
-  ]},
-  {name:"Arsenal",abbr:"ARS",era:"2004",shape:"shield",bg:"#EF0107",fg:"#fff",ac:"#063672",players:[
-    {n:"J. Lehmann",pos:"GK",r:86},{n:"Lauren",pos:"DEF",r:80},{n:"A. Cole",pos:"DEF",r:87},{n:"S. Campbell",pos:"DEF",r:86},{n:"A. Cygan",pos:"DEF",r:72},{n:"P. Vieira",pos:"MID",r:93},{n:"G. Gilberto",pos:"MID",r:82},{n:"R. Pires",pos:"MID",r:88},{n:"F. Ljungberg",pos:"MID",r:84},{n:"T. Henry",pos:"FWD",r:96},{n:"D. Bergkamp",pos:"FWD",r:89},{n:"J. Reyes",pos:"FWD",r:80},{n:"R. Parlour",pos:"MID",r:76}
-  ]},
-  {name:"Liverpool",abbr:"LFC",era:"2005",shape:"shield",bg:"#C8102E",fg:"#fff",ac:"#F6EB61",players:[
-    {n:"J. Dudek",pos:"GK",r:80},{n:"S. Finnan",pos:"DEF",r:77},{n:"J. Carragher",pos:"DEF",r:86},{n:"S. Hyypiä",pos:"DEF",r:82},{n:"D. Traoré",pos:"DEF",r:74},{n:"X. Alonso",pos:"MID",r:87},{n:"D. Hamann",pos:"MID",r:82},{n:"S. Gerrard",pos:"MID",r:92},{n:"H. Kewell",pos:"FWD",r:79},{n:"M. Baroš",pos:"FWD",r:76},{n:"D. Cissé",pos:"FWD",r:78},{n:"L. García",pos:"FWD",r:78},{n:"V. Smicer",pos:"MID",r:74}
-  ]},
-  {name:"Man City",abbr:"MCY",era:"2012",shape:"shield",bg:"#6CABDD",fg:"#fff",ac:"#1C2C5B",players:[
-    {n:"J. Hart",pos:"GK",r:84},{n:"P. Zabaleta",pos:"DEF",r:82},{n:"V. Kompany",pos:"DEF",r:89},{n:"J. Lescott",pos:"DEF",r:80},{n:"G. Clichy",pos:"DEF",r:80},{n:"Y. Touré",pos:"MID",r:90},{n:"G. Barry",pos:"MID",r:78},{n:"D. Silva",pos:"MID",r:89},{n:"S. Nasri",pos:"MID",r:84},{n:"C. Tévez",pos:"FWD",r:88},{n:"S. Agüero",pos:"FWD",r:92},{n:"E. Džeko",pos:"FWD",r:82},{n:"J. Milner",pos:"MID",r:80}
-  ]},
-  {name:"Wolves",abbr:"WOL",era:"2020",shape:"diamond",bg:"#FDB913",fg:"#231F20",ac:"#231F20",players:[
-    {n:"R. Patrício",pos:"GK",r:83},{n:"M. Doherty",pos:"DEF",r:78},{n:"C. Coady",pos:"DEF",r:79},{n:"W. Boly",pos:"DEF",r:78},{n:"Jonny",pos:"DEF",r:76},{n:"J. Moutinho",pos:"MID",r:82},{n:"R. Neves",pos:"MID",r:84},{n:"L. Dendoncker",pos:"MID",r:77},{n:"A. Traoré",pos:"FWD",r:79},{n:"P. Neto",pos:"FWD",r:78},{n:"Raúl Jiménez",pos:"FWD",r:83},{n:"D. Podence",pos:"FWD",r:75},{n:"M. Saïss",pos:"DEF",r:77}
-  ]},
-  {name:"Everton",abbr:"EVE",era:"2004",shape:"circle",bg:"#003399",fg:"#fff",ac:"#fff",players:[
-    {n:"N. Martyn",pos:"GK",r:81},{n:"A. Pistone",pos:"DEF",r:73},{n:"D. Weir",pos:"DEF",r:79},{n:"A. Stubbs",pos:"DEF",r:77},{n:"T. Hibbert",pos:"DEF",r:75},{n:"P. Gravesen",pos:"MID",r:79},{n:"L. Carsley",pos:"MID",r:76},{n:"T. Cahill",pos:"MID",r:81},{n:"K. Kilbane",pos:"MID",r:74},{n:"W. Rooney",pos:"FWD",r:87},{n:"M. Ferguson",pos:"FWD",r:76},{n:"N. Campbell",pos:"FWD",r:74},{n:"J. McFadden",pos:"MID",r:73}
-  ]},
-  {name:"Brentford",abbr:"BFC",era:"2023",shape:"shield",bg:"#E30613",fg:"#fff",ac:"#fff",players:[
-    {n:"D. Flekken",pos:"GK",r:77},{n:"K. Ajer",pos:"DEF",r:76},{n:"B. Collins",pos:"DEF",r:77},{n:"E. Pinnock",pos:"DEF",r:76},{n:"R. Henry",pos:"DEF",r:75},{n:"Ch. Nørgaard",pos:"MID",r:79},{n:"M. Jensen",pos:"MID",r:78},{n:"V. Janelt",pos:"MID",r:76},{n:"S. Ghoddos",pos:"MID",r:74},{n:"I. Toney",pos:"FWD",r:83},{n:"B. Mbeumo",pos:"FWD",r:80},{n:"K. Lewis-Potter",pos:"FWD",r:75},{n:"Y. Wissa",pos:"FWD",r:77}
   ]}
 ];
 
-// Map club data directly to players for chemistry logic
-CLUBS.forEach(c => {
-  c.players.forEach(p => {
-    p.clubName = c.name;
-    p.clubEra = c.era;
-  });
-});
+CLUBS.forEach(c => c.players.forEach(p => { p.clubName = c.name; p.clubEra = c.era; }));
 
-const NEEDS=["GK","DEF","DEF","DEF","MID","MID","MID","MID","FWD","FWD","FWD"];
 let st={
-  p1:{name:"Alex",picks:[],needed:[...NEEDS],respins:1},
-  p2:{name:"Jordan",picks:[],needed:[...NEEDS],respins:1},
+  config: { formation: '4-3-3', difficulty: 'normal', blindMode: false },
+  p1:{name:"Alex",picks:[],needed:[],respins:1},
+  p2:{name:"Jordan",picks:[],needed:[],respins:1},
   turn:1,selected:null,spinning:false,
   matchGoalScorers:{p1:{},p2:{}},matchAssists:{p1:{},p2:{}},
   isOnline:false,myRole:"p1",peer:null,conn:null
 };
 let formTab=1;
 
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');startMusic();}
-function resetGame(){
-  if(st.peer) { try{ st.peer.destroy(); }catch(e){} }
-  st={p1:{name:"Alex",picks:[],needed:[...NEEDS],respins:1},p2:{name:"Jordan",picks:[],needed:[...NEEDS],respins:1},turn:1,selected:null,spinning:false,matchGoalScorers:{p1:{},p2:{}},matchAssists:{p1:{},p2:{}},isOnline:false,myRole:"p1",peer:null,conn:null};
-  document.getElementById('online-lobby-status').textContent="";
-  document.getElementById('join-room-code').value="";
-  togglePlayMode('local');
-  showScreen('welcome');
+// ─── SETUP UI LOGIC ──────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", initSetupUI);
+
+function initSetupUI() {
+  const fContainer = document.getElementById('formation-btns');
+  fContainer.innerHTML = Object.keys(FORMATIONS).map(f =>
+    `<button class="tab-btn ${st.config.formation === f ? 'active' : ''}" onclick="selectFormation('${f}')" id="btn-form-${f}">${f}</button>`
+  ).join('');
+  selectFormation(st.config.formation);
+  selectDifficulty(st.config.difficulty);
 }
+
+function selectFormation(f) {
+  st.config.formation = f;
+  document.querySelectorAll('[id^="btn-form-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-form-'+f).classList.add('active');
+  document.getElementById('form-desc').textContent = FORMATIONS[f].desc;
+  renderMiniPitch(FORMATIONS[f].n);
+}
+
+function renderMiniPitch(needs) {
+  const counts = { GK:0, DEF:0, MID:0, FWD:0 };
+  needs.forEach(pos => counts[pos]++);
+  document.getElementById('mini-pitch-preview').innerHTML =
+    `<div class="mini-pitch-row">${Array(counts.FWD).fill('<div class="mini-dot fwd"></div>').join('')}</div>
+     <div class="mini-pitch-row">${Array(counts.MID).fill('<div class="mini-dot mid"></div>').join('')}</div>
+     <div class="mini-pitch-row">${Array(counts.DEF).fill('<div class="mini-dot def"></div>').join('')}</div>
+     <div class="mini-pitch-row"><div class="mini-dot gk"></div></div>`;
+}
+
+function selectDifficulty(d) {
+  st.config.difficulty = d;
+  document.querySelectorAll('[id^="btn-diff-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-diff-'+d).classList.add('active');
+  document.getElementById('diff-desc').textContent = DIFFICULTIES[d].desc;
+
+  const rToggle = document.getElementById('ratings-toggle');
+  if(DIFFICULTIES[d].blind) {
+    rToggle.checked = false; rToggle.disabled = true; st.config.blindMode = true;
+    document.getElementById('ratings-desc').textContent = "Off - Blind mode (Forced by Hard)";
+  } else {
+    rToggle.disabled = false;
+    if(rToggle.checked) st.config.blindMode = false;
+    document.getElementById('ratings-desc').textContent = rToggle.checked ? "On - Player overalls visible" : "Off - Blind mode";
+  }
+}
+
+function toggleRatings() {
+  const rToggle = document.getElementById('ratings-toggle');
+  st.config.blindMode = !rToggle.checked;
+  document.getElementById('ratings-desc').textContent = rToggle.checked ? "On - Player overalls visible" : "Off - Blind mode — trust your gut";
+}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');startMusic();}
+function resetGame(){location.reload();}
 
 // ─── ONLINE MULTIPLAYER HANDLING (PEERJS) ───────────────────────────────────
 function togglePlayMode(mode) {
@@ -498,11 +533,6 @@ function initHostRoom() {
     document.getElementById('online-lobby-status').innerHTML = `Room Active! Share Code: <strong style="color:var(--color-green); font-size:16px;">${id}</strong><br>Waiting for opponent connection...`;
   });
 
-  st.peer.on('error', err => {
-    if(err.type === 'unavailable-id') initHostRoom();
-    else document.getElementById('online-lobby-status').textContent = "Connection Error: " + err.type;
-  });
-
   st.peer.on('connection', connection => {
     st.conn = connection;
     setupNetworkChannel();
@@ -523,10 +553,6 @@ function initJoinRoom() {
     st.conn = st.peer.connect(targetCode);
     setupNetworkChannel();
   });
-
-  st.peer.on('error', err => {
-    document.getElementById('online-lobby-status').textContent = "Failed to join: " + err.type;
-  });
 }
 
 function setupNetworkChannel() {
@@ -535,7 +561,8 @@ function setupNetworkChannel() {
     document.getElementById('online-lobby-status').textContent = "Connected! Setting up field...";
     
     if(st.myRole === 'p1') {
-      st.conn.send({ type: 'handshake', name: st.p1.name });
+      // Host sends their config to the Joiner
+      st.conn.send({ type: 'handshake', name: st.p1.name, config: st.config });
     } else {
       st.conn.send({ type: 'handshake', name: st.p2.name });
     }
@@ -548,6 +575,8 @@ function setupNetworkChannel() {
           st.p2.name = data.name;
           st.conn.send({ type: 'handshake_reply', name: st.p1.name });
           setTimeout(() => startOnlineDraftMode(), 1000);
+        } else {
+          st.config = data.config; // Sync settings from Host
         }
         break;
       case 'handshake_reply':
@@ -578,16 +607,14 @@ function setupNetworkChannel() {
         break;
     }
   });
-
-  st.conn.on('close', () => {
-    alert("Connection lost with opponent.");
-    resetGame();
-  });
 }
 
 function startOnlineDraftMode() {
-  st.p1.picks=[]; st.p2.picks=[]; st.p1.needed=[...NEEDS]; st.p2.needed=[...NEEDS];
-  st.p1.respins=1; st.p2.respins=1;
+  st.p1.picks=[]; st.p2.picks=[]; 
+  st.p1.needed=[...FORMATIONS[st.config.formation].n]; 
+  st.p2.needed=[...FORMATIONS[st.config.formation].n];
+  st.p1.respins=DIFFICULTIES[st.config.difficulty].rerolls; 
+  st.p2.respins=DIFFICULTIES[st.config.difficulty].rerolls;
   st.turn=1; st.selected=null; st.spinning=false;
   renderDraft();
   showScreen('draft');
@@ -605,15 +632,19 @@ function startGame(){
   if(st.isOnline) return;
   st.p1.name=document.getElementById('p1name').value||'Alex';
   st.p2.name=document.getElementById('p2name').value||'Jordan';
-  st.p1.picks=[];st.p2.picks=[];st.p1.needed=[...NEEDS];st.p2.needed=[...NEEDS];
-  st.p1.respins=1;st.p2.respins=1;
+  st.p1.picks=[];st.p2.picks=[];
+  st.p1.needed=[...FORMATIONS[st.config.formation].n];
+  st.p2.needed=[...FORMATIONS[st.config.formation].n];
+  st.p1.respins=DIFFICULTIES[st.config.difficulty].rerolls;
+  st.p2.respins=DIFFICULTIES[st.config.difficulty].rerolls;
   st.turn=1;st.selected=null;st.spinning=false;
   renderDraft();showScreen('draft');
 }
 
 function totalPicks(){return st.p1.picks.length+st.p2.picks.length;}
 function updateProgress(){
-  const total=22,done=totalPicks();
+  const total = FORMATIONS[st.config.formation].n.length * 2;
+  const done = totalPicks();
   document.getElementById('draft-progress').style.width=Math.round(done/total*100)+'%';
   document.getElementById('pick-num').textContent=done+1;
   document.getElementById('pick-total').textContent=total;
@@ -625,17 +656,23 @@ function renderDraft(){
   document.getElementById('turn-banner').className='turn-banner '+cls;
   
   let appendMsg = "";
-  if(st.isOnline) {
-    appendMsg = isMyTurn() ? " (YOUR TURN)" : " (OPPONENT'S TURN)";
-  }
+  if(st.isOnline) appendMsg = isMyTurn() ? " (YOUR TURN)" : " (OPPONENT'S TURN)";
   document.getElementById('turn-banner').textContent=`${cur.name}'s turn${appendMsg}`;
   
   document.getElementById('p1-header').textContent=st.p1.name+"'s XI";
   document.getElementById('p2-header').textContent=st.p2.name+"'s XI";
-  renderSlots('team1-slots',st.p1.picks);
-  renderSlots('team2-slots',st.p2.picks);
+
+  renderSlots('team1-slots',st.p1.picks, FORMATIONS[st.config.formation].n);
+  renderSlots('team2-slots',st.p2.picks, FORMATIONS[st.config.formation].n);
   renderNeeds('p1-needs',st.p1.needed);
   renderNeeds('p2-needs',st.p2.needed);
+
+  // Active Team Visual Opacity Scaling
+  document.getElementById('team1-container').style.opacity = st.turn===1 ? '1' : '0.4';
+  document.getElementById('team2-container').style.opacity = st.turn===2 ? '1' : '0.4';
+  document.getElementById('team1-container').style.transform = st.turn===1 ? 'scale(1.02)' : 'scale(1)';
+  document.getElementById('team2-container').style.transform = st.turn===2 ? 'scale(1.02)' : 'scale(1)';
+
   updateProgress();
   st.selected=null;
   
@@ -650,14 +687,16 @@ function renderDraft(){
   document.getElementById('confirm-pick').disabled=true;
 }
 
-function renderSlots(id,picks){
+function renderSlots(id,picks,needsArray){
   const el=document.getElementById(id);
-  const slots=NEEDS.map(p=>({pos:p,player:null}));
+  const slots=needsArray.map(p=>({pos:p,player:null}));
   picks.forEach(pk=>{const i=slots.findIndex(s=>s.pos===pk.pos&&!s.player);if(i>=0)slots[i].player=pk;});
-  el.innerHTML=slots.map(s=>s.player
-    ?`<div class="pos-slot filled"><div class="plabel">${s.pos}</div><div class="rating">${s.player.r}</div><div class="pname">${s.player.n}</div></div>`
+  el.innerHTML=slots.map(s=>{
+    const displayR = (s.player && !st.config.blindMode) ? s.player.r : '?';
+    return s.player
+    ?`<div class="pos-slot filled"><div class="plabel">${s.pos}</div><div class="rating">${displayR}</div><div class="pname">${s.player.n}</div></div>`
     :`<div class="pos-slot"><div class="plabel">${s.pos}</div><div class="muted" style="font-size:9px">empty</div></div>`
-  ).join('');
+  }).join('');
 }
 
 function renderNeeds(id,needed){
@@ -670,11 +709,8 @@ function posClass(pos){return pos.toLowerCase();}
 function spinWheel(){
   if(st.spinning)return;
   if(st.isOnline && !isMyTurn()) return;
-  
   const chosenClub = CLUBS[Math.floor(Math.random()*CLUBS.length)];
-  if(st.isOnline && st.conn) {
-    st.conn.send({ type: 'spin', clubName: chosenClub.name, era: chosenClub.era });
-  }
+  if(st.isOnline && st.conn) st.conn.send({ type: 'spin', clubName: chosenClub.name, era: chosenClub.era });
   executeSpinAnimationSequence(chosenClub);
 }
 
@@ -686,15 +722,10 @@ function respin(){
   cur.respins--;
   document.getElementById('respin-btn').disabled=true;
   document.getElementById('squad-area').style.display='none';
-  
-  if(st.isOnline && st.conn) {
-    st.conn.send({ type: 'respin_click' });
-  }
+  if(st.isOnline && st.conn) st.conn.send({ type: 'respin_click' });
   
   const chosenClub = CLUBS[Math.floor(Math.random()*CLUBS.length)];
-  if(st.isOnline && st.conn) {
-    st.conn.send({ type: 'spin', clubName: chosenClub.name, era: chosenClub.era });
-  }
+  if(st.isOnline && st.conn) st.conn.send({ type: 'spin', clubName: chosenClub.name, era: chosenClub.era });
   executeSpinAnimationSequence(chosenClub);
 }
 
@@ -730,7 +761,6 @@ function executeSpinAnimationSequence(clubObj){
 function showSquad(club){
   const cur=st.turn===1?st.p1:st.p2;
   const needSet=new Set(cur.needed);
-  const hasUseful=club.players.some(p=>needSet.has(p.pos));
   const order=['GK','DEF','MID','FWD'];
   const grouped={GK:[],DEF:[],MID:[],FWD:[]};
   club.players.forEach(p=>{if(grouped[p.pos])grouped[p.pos].push(p);});
@@ -739,16 +769,17 @@ function showSquad(club){
     const players=grouped[pos];
     if(!players||!players.length)return;
     html+=`<div class="pos-group"><div class="pos-group-label">${pos}</div>`;
-    players.forEach((p,i)=>{
+    players.forEach((p)=>{
       const avail=needSet.has(p.pos);
       const pc=posClass(p.pos);
-      const pct=Math.round((p.r-65)/35*100);
+      const displayR = st.config.blindMode ? '??' : p.r;
+      const pct = st.config.blindMode ? 0 : Math.round((p.r-65)/35*100);
       html+=`<div class="player-row${avail?'':' unavailable'}" onclick="selectPlayer(${JSON.stringify(p).replace(/"/g,'&quot;')},this)">
-        <div class="r-badge ${pc}">${p.r}</div>
+        <div class="r-badge ${pc}">${displayR}</div>
         <div style="flex:1">
           <div style="font-weight:600;font-size:14px;color:#fff">${p.n}</div>
           <div class="muted" style="font-size:11px">${club.name} · ${club.era}</div>
-          <div class="str-bar"><div class="str-fill" style="width:${pct}%"></div></div>
+          ${!st.config.blindMode ? `<div class="str-bar"><div class="str-fill" style="width:${pct}%"></div></div>` : ''}
         </div>
         <span class="pos-tag ${pc}">${p.pos}</span>
         ${avail?'':'<span style="font-size:10px;color:rgba(255,255,255,.25);margin-left:4px">full</span>'}
@@ -760,7 +791,6 @@ function showSquad(club){
   document.getElementById('squad-sub').textContent='Pick a player you need';
   document.getElementById('squad-list').innerHTML=html;
   document.getElementById('squad-area').style.display='block';
-  document.getElementById('squad-area')._club=club;
   
   const canInteract = isMyTurn();
   if(cur.respins>0) {
@@ -783,10 +813,7 @@ function selectPlayer(pObj,el){
 function confirmPick(){
   if(!st.selected)return;
   if(st.isOnline && !isMyTurn()) return;
-
-  if(st.isOnline && st.conn) {
-    st.conn.send({ type: 'confirm_pick', selected: st.selected });
-  }
+  if(st.isOnline && st.conn) st.conn.send({ type: 'confirm_pick', selected: st.selected });
   executeDraftPickExtraction(st.selected);
 }
 
@@ -808,15 +835,14 @@ function applyChemistry(team) {
     // Teammates that share the same club get matched
     const teammates = team.picks.filter(o => o !== p && o.clubName === p.clubName).length;
     p.chemLinks = teammates;
-    if (teammates >= 2) p.boostedR = p.r + 4;       // 2 or more teammates = +4 boost
-    else if (teammates === 1) p.boostedR = p.r + 2; // 1 teammate = +2 boost
-    else p.boostedR = p.r;                          // No teammates = base rating
+    if (teammates >= 2) p.boostedR = p.r + 4;       
+    else if (teammates === 1) p.boostedR = p.r + 2; 
+    else p.boostedR = p.r;                          
   });
 }
 
 // ─── FORMATION VIEW ────────────────────────────────────────────────────────
 function goToFormation(){
-  // Calculate final ratings + chemistry logic before visualizing
   applyChemistry(st.p1);
   applyChemistry(st.p2);
 
@@ -848,15 +874,14 @@ function switchFormTab(n){
 }
 
 function renderFormation(team){
-  const picks=team.picks;
-  const gk=picks.filter(p=>p.pos==='GK');
-  const defs=picks.filter(p=>p.pos==='DEF');
-  const mids=picks.filter(p=>p.pos==='MID');
-  const fwds=picks.filter(p=>p.pos==='FWD');
+  const gk=team.picks.filter(p=>p.pos==='GK');
+  const defs=team.picks.filter(p=>p.pos==='DEF');
+  const mids=team.picks.filter(p=>p.pos==='MID');
+  const fwds=team.picks.filter(p=>p.pos==='FWD');
   function rowHtml(players){
     return`<div class="pitch-row">${players.map(p=>{
       const pc=posClass(p.pos);
-      const r = p.boostedR || p.r;
+      const r = p.boostedR || p.r; // Ratings always revealed at this stage!
       const chemCls = p.chemLinks > 0 ? ' chem-boost' : '';
       const chemHtml = p.chemLinks > 0 ? `<div class="chem-tag">🔗+${p.boostedR - p.r}</div>` : '';
       return`<div class="pitch-player"><div class="p-circle ${pc}${chemCls}">${r}</div>${chemHtml}<div class="p-name">${p.n.split(' ').pop()}</div></div>`;
@@ -875,7 +900,6 @@ function goToMatch(){
 
 // ─── MATCH ENGINE ─────────────────────────────────────────────────────────
 function teamRating(team){return Math.round(team.picks.reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,team.picks.length));}
-
 function getUnit(team,pos){return team.picks.filter(p=>p.pos===pos);}
 
 function setupMatch(){
@@ -948,12 +972,7 @@ function simulateMatch(){
     }
 
     if(st.isOnline && st.conn) {
-      st.conn.send({
-        type: 'match_simulation',
-        events: events,
-        matchGoalScorers: st.matchGoalScorers,
-        matchAssists: st.matchAssists
-      });
+      st.conn.send({ type: 'match_simulation', events: events, matchGoalScorers: st.matchGoalScorers, matchAssists: st.matchAssists });
     }
     playbackMatchEvents(events, r1, r2);
   }
@@ -996,8 +1015,6 @@ function renderStats(s1,s2,r1,r2){
 
 function showResult(s1,s2,r1,r2){
   const el=document.getElementById('result-area');el.style.display='block';
-  // MOTM
-  const allScorers={...Object.entries(st.matchGoalScorers.p1).map(([n,g])=>({n,g,team:st.p1.name})),...Object.entries(st.matchGoalScorers.p2).map(([n,g])=>({n,g,team:st.p2.name}))};
   let motm=null;
   [...st.p1.picks,...st.p2.picks].forEach(p=>{
     const teamKey=st.p1.picks.includes(p)?'p1':'p2';
@@ -1019,7 +1036,6 @@ function showResult(s1,s2,r1,r2){
         <div class="motm-r">${motm.player.boostedR||motm.player.r}</div>
       </div>`;
   }
-  // Scorers list
   let scorerHtml='<div class="scorers-list">';
   const addScorers=(tGoals,tAssists,tName,cls)=>{
     const all=new Set([...Object.keys(tGoals),...Object.keys(tAssists)]);
@@ -1032,7 +1048,7 @@ function showResult(s1,s2,r1,r2){
   addScorers(st.matchGoalScorers.p2,st.matchAssists.p2,st.p2.name,'p2-header');
   scorerHtml+='</div>';
   document.getElementById('scorers-summary').innerHTML=scorerHtml;
-  // Winner
+  
   const finalScore=s1+' – '+s2;
   if(s1>s2){document.getElementById('winner-trophy').textContent='🏆';document.getElementById('winner-text').textContent=st.p1.name+' wins!';document.getElementById('winner-sub').textContent='Final score: '+finalScore+' · What a match!';}
   else if(s2>s1){document.getElementById('winner-trophy').textContent='🏆';document.getElementById('winner-text').textContent=st.p2.name+' wins!';document.getElementById('winner-sub').textContent='Final score: '+finalScore+' · Brilliant victory!';}
