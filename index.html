@@ -102,13 +102,15 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 .str-bar{height:3px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:4px;overflow:hidden}
 .str-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#22a852,#00ff66)}
 
-/* formation pitch */
+/* formation pitch & chemistry */
 .pitch-view{background:linear-gradient(180deg,#0a2e14,#0d3a1a,#0a2e14);border-radius:16px;padding:16px 10px;border:1px solid rgba(0,255,102,.15);position:relative;overflow:hidden}
 .pitch-lines{position:absolute;inset:0;pointer-events:none}
 .pitch-row{display:flex;justify-content:center;gap:6px;margin-bottom:8px}
 .pitch-player{text-align:center;width:62px}
 .pitch-player .p-circle{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;font-size:13px;font-weight:800;border:2px solid rgba(255,255,255,.2);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .pitch-player .p-circle.gk{background:var(--color-gk)}.pitch-player .p-circle.def{background:var(--color-def)}.pitch-player .p-circle.mid{background:var(--color-mid)}.pitch-player .p-circle.fwd{background:var(--color-fwd)}
+.pitch-player .p-circle.chem-boost{border-color:#fbbf24 !important;box-shadow:0 0 12px rgba(251,191,36,0.6) !important;color:#fff;}
+.chem-tag{font-size:10px;color:#fbbf24;font-weight:800;margin-top:-3px;margin-bottom:2px;text-shadow:0 0 5px rgba(251,191,36,0.5);}
 .pitch-player .p-name{font-size:9px;color:#ddd;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62px}
 
 /* match */
@@ -184,7 +186,7 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
     <p class="muted" style="max-width:300px;margin:0 auto 2.5rem;line-height:1.6">Spin for clubs. Draft legends. Build your XI. Dominate the pitch.</p>
     <button class="btn btn-primary glow-btn" style="width:100%;max-width:280px;padding:16px;font-size:15px" onclick="showScreen('setup')">⚡ Enter Arena</button>
   </div>
-  <div style="text-align:center;padding-bottom:1rem" class="muted">v3.0 · Premium Match Engine</div>
+  <div style="text-align:center;padding-bottom:1rem" class="muted">v3.5 · Premium Match Engine & Chemistry</div>
 </div>
 
 <!-- SETUP -->
@@ -237,6 +239,7 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
       <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">2</span><span class="muted">See the full squad — pick any player you still need</span></div>
       <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">3</span><span class="muted">If no useful players, use your free Respin</span></div>
       <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">4</span><span class="muted">Fill GK · 3 DEF · 4 MID · 3 FWD then simulate!</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="pill-blue">5</span><span style="color:#fbbf24;font-size:13px;font-weight:600">Chemistry: Draft teammates from the same club for rating boosts!</span></div>
     </div>
   </div>
   <button id="start-local-btn" class="btn btn-primary" style="width:100%;padding:14px" onclick="startGame()">⚽ Start Draft</button>
@@ -288,7 +291,7 @@ input[type="text"]:focus{outline:none;border-color:var(--color-green)}
 <div id="formation" class="screen">
   <div style="text-align:center">
     <h2 style="margin-bottom:4px">Teams Confirmed</h2>
-    <p class="muted" style="font-size:13px">Review your squads before kick-off</p>
+    <p class="muted" style="font-size:13px">Review your squads and chemistry links</p>
   </div>
   <div class="tab-btns">
     <button class="tab-btn active" id="tab-p1" onclick="switchFormTab(1)">👤 <span id="tab-p1-name">Alex</span></button>
@@ -421,6 +424,14 @@ const CLUBS=[
     {n:"D. Flekken",pos:"GK",r:77},{n:"K. Ajer",pos:"DEF",r:76},{n:"B. Collins",pos:"DEF",r:77},{n:"E. Pinnock",pos:"DEF",r:76},{n:"R. Henry",pos:"DEF",r:75},{n:"Ch. Nørgaard",pos:"MID",r:79},{n:"M. Jensen",pos:"MID",r:78},{n:"V. Janelt",pos:"MID",r:76},{n:"S. Ghoddos",pos:"MID",r:74},{n:"I. Toney",pos:"FWD",r:83},{n:"B. Mbeumo",pos:"FWD",r:80},{n:"K. Lewis-Potter",pos:"FWD",r:75},{n:"Y. Wissa",pos:"FWD",r:77}
   ]}
 ];
+
+// Map club data directly to players for chemistry logic
+CLUBS.forEach(c => {
+  c.players.forEach(p => {
+    p.clubName = c.name;
+    p.clubEra = c.era;
+  });
+});
 
 const NEEDS=["GK","DEF","DEF","DEF","MID","MID","MID","MID","FWD","FWD","FWD"];
 let st={
@@ -791,8 +802,24 @@ function executeDraftPickExtraction(playerObj) {
   renderDraft();
 }
 
+// ─── CHEMISTRY CALCULATION ─────────────────────────────────────────────────
+function applyChemistry(team) {
+  team.picks.forEach(p => {
+    // Teammates that share the same club get matched
+    const teammates = team.picks.filter(o => o !== p && o.clubName === p.clubName).length;
+    p.chemLinks = teammates;
+    if (teammates >= 2) p.boostedR = p.r + 4;       // 2 or more teammates = +4 boost
+    else if (teammates === 1) p.boostedR = p.r + 2; // 1 teammate = +2 boost
+    else p.boostedR = p.r;                          // No teammates = base rating
+  });
+}
+
 // ─── FORMATION VIEW ────────────────────────────────────────────────────────
 function goToFormation(){
+  // Calculate final ratings + chemistry logic before visualizing
+  applyChemistry(st.p1);
+  applyChemistry(st.p2);
+
   formTab=1;
   document.getElementById('tab-p1-name').textContent=st.p1.name;
   document.getElementById('tab-p2-name').textContent=st.p2.name;
@@ -829,7 +856,10 @@ function renderFormation(team){
   function rowHtml(players){
     return`<div class="pitch-row">${players.map(p=>{
       const pc=posClass(p.pos);
-      return`<div class="pitch-player"><div class="p-circle ${pc}">${p.r}</div><div class="p-name">${p.n.split(' ').pop()}</div></div>`;
+      const r = p.boostedR || p.r;
+      const chemCls = p.chemLinks > 0 ? ' chem-boost' : '';
+      const chemHtml = p.chemLinks > 0 ? `<div class="chem-tag">🔗+${p.boostedR - p.r}</div>` : '';
+      return`<div class="pitch-player"><div class="p-circle ${pc}${chemCls}">${r}</div>${chemHtml}<div class="p-name">${p.n.split(' ').pop()}</div></div>`;
     }).join('')}</div>`;
   }
   document.getElementById('formation-pitch').innerHTML=
@@ -844,7 +874,7 @@ function goToMatch(){
 }
 
 // ─── MATCH ENGINE ─────────────────────────────────────────────────────────
-function teamRating(team){return Math.round(team.picks.reduce((s,p)=>s+p.r,0)/Math.max(1,team.picks.length));}
+function teamRating(team){return Math.round(team.picks.reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,team.picks.length));}
 
 function getUnit(team,pos){return team.picks.filter(p=>p.pos===pos);}
 
@@ -862,12 +892,12 @@ function setupMatch(){
 
 function simulateMatch(){
   const r1=teamRating(st.p1),r2=teamRating(st.p2);
-  const gk1=getUnit(st.p1,'GK').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p1,'GK').length);
-  const gk2=getUnit(st.p2,'GK').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p2,'GK').length);
-  const def1=getUnit(st.p1,'DEF').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p1,'DEF').length);
-  const def2=getUnit(st.p2,'DEF').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p2,'DEF').length);
-  const atk1=getUnit(st.p1,'FWD').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p1,'FWD').length);
-  const atk2=getUnit(st.p2,'FWD').reduce((s,p)=>s+p.r,0)/Math.max(1,getUnit(st.p2,'FWD').length);
+  const gk1=getUnit(st.p1,'GK').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p1,'GK').length);
+  const gk2=getUnit(st.p2,'GK').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p2,'GK').length);
+  const def1=getUnit(st.p1,'DEF').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p1,'DEF').length);
+  const def2=getUnit(st.p2,'DEF').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p2,'DEF').length);
+  const atk1=getUnit(st.p1,'FWD').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p1,'FWD').length);
+  const atk2=getUnit(st.p2,'FWD').reduce((s,p)=>s+(p.boostedR||p.r),0)/Math.max(1,getUnit(st.p2,'FWD').length);
   const attack1=atk1/(def2*0.6+gk2*0.4);
   const attack2=atk2/(def1*0.6+gk1*0.4);
   const base=0.022;
@@ -888,7 +918,7 @@ function simulateMatch(){
       if(m===45&&!ht){ht=true;events.push({min:45,type:'info',text:'🕐 Half time'});}
       if(Math.random()<sc1p){
         s1++;
-        const w=scorers1.map(p=>p.pos==='FWD'?p.r*2:p.r);
+        const w=scorers1.map(p=>p.pos==='FWD'?(p.boostedR||p.r)*2:(p.boostedR||p.r));
         const total=w.reduce((a,b)=>a+b,0);
         let rnd=Math.random()*total,scorer=scorers1[0];
         for(let i=0;i<scorers1.length;i++){rnd-=w[i];if(rnd<=0){scorer=scorers1[i];break;}}
@@ -900,7 +930,7 @@ function simulateMatch(){
       }
       if(Math.random()<sc2p){
         s2++;
-        const w=scorers2.map(p=>p.pos==='FWD'?p.r*2:p.r);
+        const w=scorers2.map(p=>p.pos==='FWD'?(p.boostedR||p.r)*2:(p.boostedR||p.r));
         const total=w.reduce((a,b)=>a+b,0);
         let rnd=Math.random()*total,scorer=scorers2[0];
         for(let i=0;i<scorers2.length;i++){rnd-=w[i];if(rnd<=0){scorer=scorers2[i];break;}}
@@ -973,7 +1003,7 @@ function showResult(s1,s2,r1,r2){
     const teamKey=st.p1.picks.includes(p)?'p1':'p2';
     const g=st.matchGoalScorers[teamKey][p.n]||0;
     const a=st.matchAssists[teamKey][p.n]||0;
-    const score=g*3+a+p.r/100;
+    const score=g*3+a+(p.boostedR||p.r)/100;
     if(!motm||score>motm.score)motm={player:p,g,a,team:st[teamKey].name,score};
   });
   if(motm){
@@ -986,7 +1016,7 @@ function showResult(s1,s2,r1,r2){
           <div class="muted" style="font-size:12px">${motm.team} · ${motm.player.pos}</div>
           <div style="font-size:12px;margin-top:3px;color:#fde68a">${motm.g} goal${motm.g!==1?'s':''} · ${motm.a} assist${motm.a!==1?'s':''}</div>
         </div>
-        <div class="motm-r">${motm.player.r}</div>
+        <div class="motm-r">${motm.player.boostedR||motm.player.r}</div>
       </div>`;
   }
   // Scorers list
@@ -1012,7 +1042,7 @@ function showResult(s1,s2,r1,r2){
 
 function copyResult(){
   const score=document.getElementById('match-score').textContent;
-  const text=`⚽ Football Draft Battle\n${st.p1.name} ${score} ${st.p2.name}\nPlayed on Football Draft Battle v3.0`;
+  const text=`⚽ Football Draft Battle\n${st.p1.name} ${score} ${st.p2.name}\nPlayed on Football Draft Battle v3.5`;
   navigator.clipboard.writeText(text).then(()=>{
     const m=document.getElementById('copied-msg');m.classList.add('show');setTimeout(()=>m.classList.remove('show'),2000);
   }).catch(()=>{});
